@@ -1,5 +1,10 @@
 scalar DateTime
 
+type Tag {
+  photoId: ID!
+  userId: ID!
+}
+
 type Photo {
   id: ID!
   created: DateTime!
@@ -20,12 +25,6 @@ enum PhotoCategory {
   GRAPHIC
 }
 
-input PostPhotoInput {
-  name: String!
-  category: PhotoCategory=PORTRAIT
-  description: String
-}
-
 type User {
   githubLogin: ID!
   name: String
@@ -39,8 +38,16 @@ type Query {
   allPhotos(after: DateTime): [Photo!]!
   totalUsers: Int!
   allUsers: [User!]!
+  totalTags: Int!
+  allTags: [Tag!]!
 }
 
 type Mutation {
   postPhoto(input: PostPhotoInput!): Photo!
+}
+
+input PostPhotoInput {
+  name: String!
+  category: PhotoCategory=PORTRAIT
+  description: String
 }

@@ -15,6 +15,8 @@ module.exports = {
     },
     totalUsers: () => users.length,
     allUsers: () => users,
+    totalTags: () => tags.length,
+    allTags: () => tags,
   },
   Mutation: {
     postPhoto(parent, args) {
