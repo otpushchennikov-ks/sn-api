@@ -1,8 +1,8 @@
 scalar DateTime
 
-type Tag {
-  photoId: ID!
-  userId: ID!
+type AuthPayload {
+  token: String
+  user: User!
 }
 
 type Photo {
@@ -26,7 +26,7 @@ enum PhotoCategory {
 }
 
 type User {
-  githubLogin: ID!
+  githubLogin: String!
   name: String
   avatar: String
   postedPhotos: [Photo!]!
@@ -34,16 +34,16 @@ type User {
 }
 
 type Query {
+  me: User
   totalPhotos: Int!
   allPhotos(after: DateTime): [Photo!]!
   totalUsers: Int!
   allUsers: [User!]!
-  totalTags: Int!
-  allTags: [Tag!]!
 }
 
 type Mutation {
   postPhoto(input: PostPhotoInput!): Photo!
+  githubAuth(code: String!): AuthPayload!
 }
 
 input PostPhotoInput {

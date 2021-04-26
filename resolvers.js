@@ -1,10 +1,12 @@
 const { GraphQLScalarType } = require('graphql');
 const { photos, users, tags } = require('./db');
 const { v4: uuid } = require('uuid');
+const { authorizeWithGithub } = require('./lib');
 
 
 module.exports = {
   Query: {
+    me: (parent, args, context) => context.currentUser,
     totalPhotos: () => photos.length,
     allPhotos: (parent, args) => {
       const getMs = value => Number(new Date(value));
@@ -15,8 +17,6 @@ module.exports = {
     },
     totalUsers: () => users.length,
     allUsers: () => users,
-    totalTags: () => tags.length,
-    allTags: () => tags,
   },
   Mutation: {
     postPhoto(parent, args) {
@@ -29,6 +29,39 @@ module.exports = {
       photos.push(nextPhoto);
 
       return nextPhoto;
+    },
+    async githubAuth(parent, args, context) {
+      const {
+        message,
+        token,
+        login,
+        name,
+        avatar_url,
+      } = await authorizeWithGithub({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code: args.code,
+      });
+
+      if (message) {
+        throw new Error(message);
+      }
+
+      const latestUserInfo = {
+        name,
+        githubLogin: login,
+        githubToken: token,
+        avatar: avatar_url,
+      };
+
+      const { ops: [user] } = await context.db
+        .collection('users')
+        .replaceOne({ githubLogin: login }, latestUserInfo, { upsert: true });
+
+      return {
+        user,
+        token,
+      };
     },
   },
   Photo: {

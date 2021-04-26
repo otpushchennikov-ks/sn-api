@@ -5,16 +5,27 @@ const expressPlayground = require('graphql-playground-middleware-express').defau
 const { readFileSync } = require('fs');
 const typeDefs = readFileSync('./typeDefs.gql', 'utf-8');
 const resolvers = require('./resolvers');
+require('dotenv').config();
 
 
 async function start() {
-  const dbUrl = 'mongodb+srv://yaphtes:1111@sn-cluster.umvii.mongodb.net/sn-cluster?retryWrites=true&w=majority';
-  const PORT = 4000;
+  const dbUrl = process.env.DB_HOST;
+  const PORT = process.env.PORT;
   const client = await MongoClient.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true })
   const db = client.db();
-  const context = { db };
   const app = express();
-  const server = new ApolloServer({ typeDefs, resolvers, context });
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: async ({ req }) => {
+      const githubToken = req.headers.authorization;
+      const currentUser = await db
+        .collection('users')
+        .findOne({ githubToken });
+      
+      return { db, currentUser };
+    },
+  });
   
   server.applyMiddleware({ app });
   app.get('/', expressPlayground({ endpoint: '/graphql' }));
