@@ -2,7 +2,7 @@ scalar DateTime
 
 type AuthPayload {
   token: String
-  user: User!
+  user: User
 }
 
 type Photo {
@@ -13,8 +13,7 @@ type Photo {
   name: String!
   description: String
   postedBy: User!
-  githubUser: String!
-  taggedUsers: [User!]!
+  # taggedUsers: [User!]!
 }
 
 enum PhotoCategory {
@@ -30,7 +29,7 @@ type User {
   name: String
   avatar: String
   postedPhotos: [Photo!]!
-  inPhotos: [Photo!]!
+  # inPhotos: [Photo!]!
 }
 
 type Query {
@@ -38,16 +37,18 @@ type Query {
   totalPhotos: Int!
   allPhotos(after: DateTime): [Photo!]!
   totalUsers: Int!
-  allUsers: [User!]!
+  allUsers(name: String): [User!]!
 }
 
 type Mutation {
   postPhoto(input: PostPhotoInput!): Photo!
   githubAuth(code: String!): AuthPayload!
+  addFakeUsers(count: Int = 1): [User!]!
+  fakeUserAuth(githubLogin: String!): AuthPayload!
 }
 
 input PostPhotoInput {
   name: String!
-  category: PhotoCategory=PORTRAIT
+  category: PhotoCategory = PORTRAIT
   description: String
 }
