@@ -22,3 +22,7 @@ exports.authorizeWithGithub = async credentials => {
   const githubUser = await getGithubUserAccount(token);
   return { ...githubUser, token };
 };
+
+exports.generateAuthorizationError = () => {
+  throw new Error('Authorization error');
+}
