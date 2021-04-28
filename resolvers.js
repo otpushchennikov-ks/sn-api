@@ -1,34 +1,58 @@
 const { GraphQLScalarType } = require('graphql');
-const { photos, users, tags } = require('./db');
-const { v4: uuid } = require('uuid');
-const { authorizeWithGithub } = require('./lib');
+const { authorizeWithGithub, generateAuthorizationError } = require('./lib');
+const { default: axios } = require('axios');
+const { isAfter } = require('date-fns');
 
 
 module.exports = {
   Query: {
     me: (parent, args, context) => context.currentUser,
-    totalPhotos: () => photos.length,
-    allPhotos: (parent, args) => {
-      const getMs = value => Number(new Date(value));
+    totalPhotos: (parent, arga, context) => context.db.collection('photos').count(),
+    allPhotos: async (parent, args, context) => {
+      const photos = await context.db
+        .collection('photos')
+        .find()
+        .toArray();
+
+      // TODO: реализовать эту фильтрацию на стороне БД
       return args.after ?
-        photos.filter(photo => getMs(photo.created) >= getMs(args.after))
+        photos.filter(photo => isAfter(new Date(photo.created), new Date(args.after)))
         :
         photos;
     },
-    totalUsers: () => users.length,
-    allUsers: () => users,
+    totalUsers: () => context.db.collection('users').count(),
+    allUsers: async (parent, args, context) => {
+      const users = await context.db
+        .collection('users')
+        .find()
+        .toArray();
+
+      // TODO: реализовать эту фильтрацию на стороне БД
+      return !args.name ? users : users.filter(({ name }) => {
+        return name.toLowerCase().includes(args.name.toLowerCase());
+      });
+    },
   },
   Mutation: {
-    postPhoto(parent, args) {
+    async postPhoto(parent, args, context) {
+      if (!context.currentUser) {
+        return generateAuthorizationError();
+      }
+
       const nextPhoto = {
-        id: uuid(),
         ...args.input,
+        postedByLogin: context.currentUser.githubLogin,
         created: new Date(),
       };
 
-      photos.push(nextPhoto);
+      const { ops: [{ _id }]} = await context.db
+        .collection('photos')
+        .insertOne(nextPhoto);
 
-      return nextPhoto;
+      return {
+        ...nextPhoto,
+        id: _id,
+      };
     },
     async githubAuth(parent, args, context) {
       const {
@@ -63,29 +87,52 @@ module.exports = {
         token,
       };
     },
+    addFakeUsers: async (parent, args, context) => {
+      const randomUserApi = `https://randomuser.me/api/?results=${args.count}`;
+      const { results } = await axios.get(randomUserApi).then(res => res.data);
+
+      const users = results.map(result => ({
+        githubLogin: result.login.username,
+        name: `${result.name.first} ${result.name.last}`,
+        avatar: result.picture.thumbnail,
+        githubToken: result.login.sha1,
+      }));
+
+      await context.db.collection('users').insertMany(users);
+
+      return users;
+    },
+    fakeUserAuth: async (parent, args, context) => {
+      const user = await context.db
+        .collection('users')
+        .findOne({ githubLogin: args.githubLogin });
+      
+      return {
+        token: user?.githubToken ?? null,
+        user,
+      };
+    },
   },
   Photo: {
-    url: parent => `TODO generate url for images by id: ${parent.id}`,
-    postedBy: parent => {
-      return users.find(user => user.githubLogin === parent.githubUser);
+    id: parent => parent._id,
+    url: parent => `http://localhost:4000/img/${parent.id}.jpg`,
+    postedBy: async (parent, args, context) => {
+      return await context.db
+        .collection('users')
+        .findOne({ githubLogin: parent.postedByLogin });
     },
-    taggedUsers: parent => {
-      return tags
-        .filter(tag => tag.photoId === parent.id)
-        .map(tag => tag.userId)
-        .map(userId => users.find(user => user.githubLogin === userId));
-    },
+    // TODO: связь многие ко многим
+    // taggedUsers: () => {},
   },
   User: {
-    postedPhotos: parent => {
-      return photos.filter(photo => photo.githubUser === parent.githubLogin);
+    postedPhotos: (parent, args, context) => {
+      return context.db
+        .collection('photos')
+        .find({ postedByLogin: parent.githubLogin })
+        .toArray();
     },
-    inPhotos: parent => {
-      return tags
-        .filter(tag => tag.userId === parent.githubLogin)
-        .map(tag => tag.photoId)
-        .map(photoId => photos.find(photo => photo.id === photoId));
-    },
+    // TODO: связь многие ко многим
+    // inPhotos: () => {},
   },
   DateTime: new GraphQLScalarType({
     name: 'DateTime',
