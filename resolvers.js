@@ -7,7 +7,7 @@ const { isAfter } = require('date-fns');
 module.exports = {
   Query: {
     me: (parent, args, context) => context.currentUser,
-    totalPhotos: (parent, arga, context) => context.db.collection('photos').count(),
+    totalPhotos: (parent, arga, context) => context.db.collection('photos').countDocuments(),
     allPhotos: async (parent, args, context) => {
       const photos = await context.db
         .collection('photos')
@@ -20,7 +20,7 @@ module.exports = {
         :
         photos;
     },
-    totalUsers: () => context.db.collection('users').count(),
+    totalUsers: (parent, args, context) => context.db.collection('users').countDocuments(),
     allUsers: async (parent, args, context) => {
       const users = await context.db
         .collection('users')
