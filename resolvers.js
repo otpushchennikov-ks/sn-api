@@ -3,7 +3,7 @@ const { authorizeWithGithub, generateAuthorizationError } = require('./lib');
 const { default: axios } = require('axios');
 const { isAfter } = require('date-fns');
 
-
+ 
 module.exports = {
   Query: {
     me: (parent, args, context) => context.currentUser,
