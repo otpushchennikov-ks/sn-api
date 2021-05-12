@@ -27,7 +27,7 @@ async function start() {
     },
   });
   
-  server.applyMiddleware({ app });
+  server.applyMiddleware({ app, cors: { credentials: true, origin: true }});
   app.get('/', expressPlayground({ endpoint: '/graphql' }));
   app.listen({ port: PORT }, () => console.log(`GraphQL Server running @ http://localhost:${PORT}${server.graphqlPath}`));
 }
