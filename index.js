@@ -5,8 +5,7 @@ const expressPlayground = require('graphql-playground-middleware-express').defau
 const { readFileSync } = require('fs');
 const typeDefs = readFileSync('./typeDefs.gql', 'utf-8');
 const resolvers = require('./resolvers');
-const { encryptGithubToken, decryptGithubToken } = require('./lib');
-const cookie = require('cookie');
+const { decryptGithubToken } = require('./lib');
 require('dotenv').config();
 
 

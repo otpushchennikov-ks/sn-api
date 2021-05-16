@@ -10,10 +10,11 @@
     "start": "nodemon -e js,json,gql"
   },
   "dependencies": {
-    "apollo-server-express": "^2.23.0",
+    "apollo-server-express": "^2.24.0",
     "axios": "^0.21.1",
-    "date-fns": "^2.21.1",
-    "dotenv": "^8.2.0",
+    "crypto-js": "^4.0.0",
+    "date-fns": "^2.21.3",
+    "dotenv": "^9.0.2",
     "express": "^4.17.1",
     "graphql": "^15.5.0",
     "graphql-playground-middleware-express": "^1.7.22",
