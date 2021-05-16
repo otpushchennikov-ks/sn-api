@@ -1,7 +1,11 @@
 const { GraphQLScalarType } = require('graphql');
-const { authorizeWithGithub, generateAuthorizationError } = require('./lib');
 const { default: axios } = require('axios');
 const { isAfter } = require('date-fns');
+const {
+  authorizeWithGithub,
+  generateAuthorizationError,
+  encryptGithubToken,
+} = require('./lib');
 
  
 module.exports = {
@@ -74,23 +78,27 @@ module.exports = {
       const latestUserInfo = {
         name,
         githubLogin: login,
-        githubToken: token,
         avatar: avatar_url,
       };
 
       const { ops: [user] } = await context.db
         .collection('users')
-        .replaceOne({ githubLogin: login }, latestUserInfo, { upsert: true });
+        .replaceOne(
+          { githubLogin: login },
+          { ...latestUserInfo, githubToken: token },
+          { upsert: true },
+        );
 
       return {
         user,
-        token,
+        githubToken: encryptGithubToken(token),
       };
     },
     addFakeUsers: async (parent, args, context) => {
       const randomUserApi = `https://randomuser.me/api/?results=${args.count}`;
       const { results } = await axios.get(randomUserApi).then(res => res.data);
 
+      // Для фейковых юзеров для аутентификации достаточно просто логинов
       const users = results.map(result => ({
         githubLogin: result.login.username,
         name: `${result.name.first} ${result.name.last}`,
@@ -98,9 +106,11 @@ module.exports = {
         githubToken: result.login.sha1,
       }));
 
-      await context.db.collection('users').insertMany(users);
+      await context.db
+        .collection('users')
+        .insertMany(users);
 
-      return users;
+      return users.map(user => ({ ...user, githubToken: encryptGithubToken(user.githubToken) }));
     },
     fakeUserAuth: async (parent, args, context) => {
       const user = await context.db
@@ -108,8 +118,8 @@ module.exports = {
         .findOne({ githubLogin: args.githubLogin });
       
       return {
-        token: user?.githubToken ?? null,
         user,
+        githubToken: encryptGithubToken(user.githubToken),
       };
     },
   },

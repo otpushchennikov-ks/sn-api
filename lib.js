@@ -1,4 +1,5 @@
 const axios = require('axios').default;
+const crypto = require('crypto-js');
 
 
 const getGithubToken = credentials => {
@@ -26,3 +27,11 @@ exports.authorizeWithGithub = async credentials => {
 exports.generateAuthorizationError = () => {
   throw new Error('Authorization error');
 }
+
+exports.encryptGithubToken = (token = '') => {
+  return crypto.AES.encrypt(token, process.env.GITHUB_TOKEN_CRYPTO_KEY).toString();
+};
+
+exports.decryptGithubToken = (token = '') => {
+  return crypto.AES.decrypt(token, process.env.GITHUB_TOKEN_CRYPTO_KEY).toString(crypto.enc.Utf8);
+};

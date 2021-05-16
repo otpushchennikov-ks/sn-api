@@ -5,23 +5,27 @@ const expressPlayground = require('graphql-playground-middleware-express').defau
 const { readFileSync } = require('fs');
 const typeDefs = readFileSync('./typeDefs.gql', 'utf-8');
 const resolvers = require('./resolvers');
+const { encryptGithubToken, decryptGithubToken } = require('./lib');
+const cookie = require('cookie');
 require('dotenv').config();
 
 
 async function start() {
   const dbUrl = process.env.DB_HOST;
   const PORT = process.env.PORT;
-  const client = await MongoClient.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true })
+  const client = await MongoClient.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
   const db = client.db();
   const app = express();
   const server = new ApolloServer({
     typeDefs,
     resolvers,
     context: async ({ req }) => {
-      const githubToken = req.headers.authorization;
+      const githubToken = req.headers['github-token'] ?? '';
+      const originalGithubToken = decryptGithubToken(githubToken);
+
       const currentUser = await db
         .collection('users')
-        .findOne({ githubToken });
+        .findOne({ githubToken: originalGithubToken });
       
       return { db, currentUser };
     },

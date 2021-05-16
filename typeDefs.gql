@@ -1,7 +1,7 @@
 scalar DateTime
 
 type AuthPayload {
-  token: String
+  githubToken: String
   user: User
 }
 
